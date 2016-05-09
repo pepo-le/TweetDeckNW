@@ -1,0 +1,14 @@
+{
+    "name": "TweetDeckNW",
+    "version": "1.0.0",
+    "main": "index.html",
+    "window": {
+        "title": "TweetDeckNW",
+        "icon": "icon.png",
+        "toolbar": false,
+        "frame": true,
+        "min_width": 800,
+        "min_height": 600,
+        "show": false
+    }
+}
