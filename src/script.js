@@ -110,6 +110,9 @@
             config = preConfig
         }
         config.toTray = toTray;
+
+        app.clearCache();
+
         try {
             fs.writeFileSync(filePath, JSON.stringify(config));
         } catch(e) {
