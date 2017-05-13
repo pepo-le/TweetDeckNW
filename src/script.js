@@ -111,7 +111,7 @@
     // ------------------------------------------
 
     // Event ------------------------------------
-     win.on('new-win-policy', function(frame, url, policy) {
+    win.on('new-win-policy', function(frame, url, policy) {
         policy.ignore();
         nw.Shell.openExternal(url);
     });
@@ -154,6 +154,10 @@
     });
 
     win.on('close', function () {
+        app.unregisterGlobalHotKey(scZoomReset);
+        app.unregisterGlobalHotKey(scZoomOut);
+        app.unregisterGlobalHotKey(scZoomIn);
+
         if (winIsMinimized) {
             config = preConfig
         }
