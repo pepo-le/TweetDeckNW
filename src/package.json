@@ -10,5 +10,6 @@
         "min_width": 800,
         "min_height": 600,
         "show": false
-    }
+    },
+    "tray": true
 }

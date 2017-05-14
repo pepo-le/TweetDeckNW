@@ -107,7 +107,7 @@
         }));
 
         tray.menu = menu;
-    }
+    };
     // ------------------------------------------
 
     // Event ------------------------------------
@@ -164,6 +164,7 @@
         config.toTray = toTray;
         config.mspgothic = mspgothic;
         config.zoomLevel = win.zoomLevel;
+
         try {
             fs.writeFileSync(filePath, JSON.stringify(config));
         } catch(e) {
@@ -173,17 +174,19 @@
         }
     });
 
-    tray.on('click', function () {
-        if (winIsMinimized) {
-            if (!winIsVisible) {
-                win.show();
-                winIsVisible = true;
+    if (app.manifest.tray) {
+        tray.on('click', function () {
+            if (winIsMinimized) {
+                if (!winIsVisible) {
+                    win.show();
+                    winIsVisible = true;
+                }
+                win.focus();
+            } else {
+                win.minimize();
             }
-            win.focus();
-        } else {
-            win.minimize();
-        }
-    });
+        });
+    }
     // ------------------------------------------
 
     // Window Setting ---------------------------
@@ -201,7 +204,13 @@
     } catch(e) {
         config.zoomLevel = 0;
     } finally {
-        createTray();
+        if (app.manifest.tray) {
+            createTray();
+        } else {
+            tray.remove();
+            toTray = false;
+        }
+
         win.show();
 
         // WebView Setting
