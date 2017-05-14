@@ -170,6 +170,9 @@
         } catch(e) {
             //...
         } finally {
+            app.clearCache();
+            tdWebview.clearData({}, {cache: true});
+
             app.quit();
         }
     });
