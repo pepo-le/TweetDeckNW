@@ -3,7 +3,10 @@
 
     const app = nw.App;
     const win = nw.Window.get();
-    const tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
+    let tray;
+    if (app.manifest.tray) {
+        tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
+    }
     const menu = new nw.Menu();
     const filePath = app.dataPath + '\\config.json';
     let tdWebview = {};
@@ -210,7 +213,6 @@
         if (app.manifest.tray) {
             createTray();
         } else {
-            tray.remove();
             toTray = false;
         }
 
