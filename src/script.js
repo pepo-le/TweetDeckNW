@@ -225,7 +225,9 @@
             tdWebview.addEventListener('loadcommit', function setZoom() {
                 win.zoomLevel = config.zoomLevel;
                 tdWebview.removeEventListener('loadcommit', setZoom);
+            });
 
+            tdWebview.addEventListener('loadcommit', function () {
                 if (mspgothic) {
                     tdWebview.insertCSS({ code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }' });
                 }
