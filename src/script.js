@@ -3,12 +3,7 @@
 
     const app = nw.App;
     const win = nw.Window.get();
-    let tray;
-    if (app.manifest.tray) {
-        tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
-    }
-    const menu = new nw.Menu();
-    const filePath = app.dataPath + '\\config.json';
+    const FILE_PATH = app.dataPath + '\\config.json';
     let tdWebview = {};
     let winIsVisible = true;
     let winIsMinimized = false;
@@ -16,6 +11,8 @@
     let mspgothic = false;
     let config = {};
     let preConfig = {};
+    const DEFAULT_WIDTH = 800;
+    const DEFAULT_HEIGHT = 600;
 
     // Shortcut ---------------------------------
     const zoomReset = {
@@ -48,10 +45,12 @@
     const scZoomReset = new nw.Shortcut(zoomReset);
     const scZoomOut = new nw.Shortcut(zoomOut);
     const scZoomIn = new nw.Shortcut(zoomIn);
-    // ------------------------------------------
 
-    // Tray Menu --------------------------------
+    // Tray -------------------------------------
     const createTray = function () {
+        const menu = new nw.Menu();
+        const tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
+
         menu.append(new nw.MenuItem({
             label: 'Open',
             click: function () {
@@ -110,20 +109,36 @@
         }));
 
         tray.menu = menu;
-    };
-    // ------------------------------------------
 
-    // Event ------------------------------------
+        tray.on('click', function () {
+            if (winIsMinimized) {
+                if (!winIsVisible) {
+                    win.show();
+                    winIsVisible = true;
+                }
+                win.focus();
+            } else {
+                win.minimize();
+            }
+        });
+    };
+
+    // Window Event -----------------------------
     win.on('new-win-policy', function(frame, url, policy) {
         policy.ignore();
         nw.Shell.openExternal(url);
     });
 
     win.on('focus', function (){
+        if (!winIsVisible) {
+            win.show();
+            winIsVisible = true;
+        }
         app.registerGlobalHotKey(scZoomReset);
         app.registerGlobalHotKey(scZoomOut);
         app.registerGlobalHotKey(scZoomIn);
     });
+
     win.on('blur', function (){
         app.unregisterGlobalHotKey(scZoomReset);
         app.unregisterGlobalHotKey(scZoomOut);
@@ -169,7 +184,7 @@
         config.zoomLevel = win.zoomLevel;
 
         try {
-            fs.writeFileSync(filePath, JSON.stringify(config));
+            fs.writeFileSync(FILE_PATH, JSON.stringify(config));
         } catch(e) {
             //...
         } finally {
@@ -180,24 +195,9 @@
         }
     });
 
-    if (app.manifest.tray) {
-        tray.on('click', function () {
-            if (winIsMinimized) {
-                if (!winIsVisible) {
-                    win.show();
-                    winIsVisible = true;
-                }
-                win.focus();
-            } else {
-                win.minimize();
-            }
-        });
-    }
-    // ------------------------------------------
-
     // Window Setting ---------------------------
     try {
-        config = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        config = JSON.parse(fs.readFileSync(FILE_PATH, 'utf8'));
         if (config.width) win.width = config.width;
         if (config.height) win.height = config.height;
         if (config.x) win.x = config.x;
@@ -209,6 +209,10 @@
         }
     } catch(e) {
         config.zoomLevel = 0;
+        win.width = DEFAULT_WIDTH;
+        win.height = DEFAULT_HEIGHT;
+        win.x = window.parent.screen.width / 2 - DEFAULT_WIDTH / 2;
+        win.y = window.parent.screen.height / 2 - DEFAULT_HEIGHT / 2;
     } finally {
         if (app.manifest.tray) {
             createTray();
@@ -244,5 +248,4 @@
         config.x = win.x;
         config.y = win.y;
     }
-    // ------------------------------------------
 })();

@@ -1,14 +1,14 @@
 {
     "name": "TweetDeckNW",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "main": "index.html",
     "window": {
         "title": "TweetDeckNW",
         "icon": "icon.png",
         "toolbar": false,
         "frame": true,
-        "min_width": 800,
-        "min_height": 600,
+        "min_width": 200,
+        "min_height": 200,
         "show": false
     },
     "tray": true
