@@ -3,8 +3,8 @@
 
     const app = nw.App;
     const win = nw.Window.get();
-    const FILE_PATH = app.dataPath + '\\config.json';
-    let tdWebview = {};
+    const CONFIG_PATH = app.dataPath + '\\config.json';
+    let tdWebview;
     let winIsVisible = true;
     let winIsMinimized = false;
     let toTray = false;
@@ -15,14 +15,14 @@
     const DEFAULT_HEIGHT = 600;
 
     // Shortcut ---------------------------------
-    const zoomReset = {
+    const scZoomReset = new nw.Shortcut({
         key : "Ctrl+0",
         active : function() {
             win.zoomLevel = 0;
         },
-    };
+    });
 
-    const zoomOut = {
+    const scZoomOut = new nw.Shortcut({
         key : "Ctrl+1",
         active : function() {
             const minZoom = -8;
@@ -30,9 +30,9 @@
                 win.zoomLevel = win.zoomLevel - 1;
             }
         },
-    };
+    });
 
-    const zoomIn = {
+    const scZoomIn = new nw.Shortcut({
         key : "Ctrl+2",
         active : function() {
             const maxZoom = 8;
@@ -40,11 +40,35 @@
                 win.zoomLevel = win.zoomLevel + 1;
             }
         },
-    };
+    });
 
-    const scZoomReset = new nw.Shortcut(zoomReset);
-    const scZoomOut = new nw.Shortcut(zoomOut);
-    const scZoomIn = new nw.Shortcut(zoomIn);
+    const scReload = new nw.Shortcut({
+        key : "F5",
+        active : function() {
+            tdWebview.reload();
+        },
+    });
+
+    let scIsActive = false;
+    const scRegister = function() {
+        if (!scIsActive) {
+            app.registerGlobalHotKey(scZoomReset);
+            app.registerGlobalHotKey(scZoomOut);
+            app.registerGlobalHotKey(scZoomIn);
+            app.registerGlobalHotKey(scReload);
+            scIsActive = true;
+        }
+    }
+
+    const scUnregister = function() {
+        if (scIsActive) {
+            app.unregisterGlobalHotKey(scZoomReset);
+            app.unregisterGlobalHotKey(scZoomOut);
+            app.unregisterGlobalHotKey(scZoomIn);
+            app.unregisterGlobalHotKey(scReload);
+            scIsActive = false;
+        }
+    }
 
     // Tray -------------------------------------
     const createTray = function () {
@@ -97,12 +121,16 @@
                 if (this.checked) {
                     mspgothic = true;
                     if (Object.keys(tdWebview).length !== 0) {
-                        tdWebview.insertCSS({ code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }' });
+                        tdWebview.insertCSS({
+                            code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }'
+                        });
                     }
                 } else {
                     mspgothic = false;
                     if (Object.keys(tdWebview).length !== 0) {
-                        tdWebview.insertCSS({ code: '.os-windows .column { font-family: Arial,Verdana,sans-serif; }' });
+                        tdWebview.insertCSS({
+                          code: '.os-windows .column { font-family: Arial,Verdana,sans-serif; }'
+                        });
                     }
                 }
             }
@@ -134,15 +162,11 @@
             win.show();
             winIsVisible = true;
         }
-        app.registerGlobalHotKey(scZoomReset);
-        app.registerGlobalHotKey(scZoomOut);
-        app.registerGlobalHotKey(scZoomIn);
+        scRegister();
     });
 
     win.on('blur', function (){
-        app.unregisterGlobalHotKey(scZoomReset);
-        app.unregisterGlobalHotKey(scZoomOut);
-        app.unregisterGlobalHotKey(scZoomIn);
+        scUnregister();
     });
 
     win.on('minimize', function () {
@@ -172,9 +196,7 @@
     });
 
     win.on('close', function () {
-        app.unregisterGlobalHotKey(scZoomReset);
-        app.unregisterGlobalHotKey(scZoomOut);
-        app.unregisterGlobalHotKey(scZoomIn);
+        scUnregister();
 
         if (winIsMinimized) {
             config = preConfig
@@ -184,20 +206,18 @@
         config.zoomLevel = win.zoomLevel;
 
         try {
-            fs.writeFileSync(FILE_PATH, JSON.stringify(config));
-        } catch(e) {
-            //...
-        } finally {
-            app.clearCache();
-            tdWebview.clearData({}, {cache: true});
+            fs.writeFileSync(CONFIG_PATH, JSON.stringify(config));
+        } catch(e) {}
 
-            app.quit();
-        }
+        app.clearCache();
+        tdWebview.clearData({}, {cache: true});
+
+        app.quit();
     });
 
-    // Window Setting ---------------------------
+    // Window Create ----------------------------
     try {
-        config = JSON.parse(fs.readFileSync(FILE_PATH, 'utf8'));
+        config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
         if (config.width) win.width = config.width;
         if (config.height) win.height = config.height;
         if (config.x) win.x = config.x;
@@ -213,39 +233,44 @@
         win.height = DEFAULT_HEIGHT;
         win.x = window.parent.screen.width / 2 - DEFAULT_WIDTH / 2;
         win.y = window.parent.screen.height / 2 - DEFAULT_HEIGHT / 2;
-    } finally {
-        if (app.manifest.tray) {
-            createTray();
-        } else {
-            toTray = false;
-        }
+    }
 
-        win.show();
+    config.width = win.width;
+    config.height = win.height;
+    config.x = win.x;
+    config.y = win.y;
 
-        // WebView Setting
-        win.window.addEventListener('DOMContentLoaded', function () {
-            tdWebview = document.getElementById('tweetdeck_frame');
+    win.show();
 
-            tdWebview.addEventListener('loadcommit', function setZoom() {
-                win.zoomLevel = config.zoomLevel;
-                tdWebview.removeEventListener('loadcommit', setZoom);
-            });
+    // WebView
+    win.window.addEventListener('DOMContentLoaded', function () {
+        tdWebview = document.getElementById('tweetdeck_frame');
 
-            tdWebview.addEventListener('loadcommit', function () {
-                if (mspgothic) {
-                    tdWebview.insertCSS({ code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }' });
-                }
-            });
-
-            tdWebview.addEventListener('newwindow', function (e) {
-                e.preventDefault();
-                nw.Shell.openExternal(e.targetUrl);
-            });
+        tdWebview.addEventListener('loadcommit', function setZoom() {
+            win.zoomLevel = config.zoomLevel;
+            tdWebview.removeEventListener('loadcommit', setZoom);
         });
 
-        config.width = win.width;
-        config.height = win.height;
-        config.x = win.x;
-        config.y = win.y;
+        tdWebview.addEventListener('loadcommit', function () {
+            if (mspgothic) {
+                tdWebview.insertCSS(
+                    { code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }'
+                });
+            }
+        });
+
+        tdWebview.addEventListener('newwindow', function (e) {
+            e.preventDefault();
+            nw.Shell.openExternal(e.targetUrl);
+        });
+    });
+
+    // Init -------------------------------------
+    if (app.manifest.tray) {
+        createTray();
+    } else {
+        toTray = false;
     }
+
+    scRegister();
 })();
