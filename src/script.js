@@ -7,12 +7,14 @@
     let tdWebview;
     let winIsVisible = true;
     let winIsMinimized = false;
+    let winIsMaximized = false;
     let toTray = false;
+    let onTop = false;
     let mspgothic = false;
     let config = {};
-    let preConfig = {};
     const DEFAULT_WIDTH = 800;
     const DEFAULT_HEIGHT = 600;
+    const MINIMIZED_X = -32000;
 
     // Shortcut ---------------------------------
     const scZoomReset = new nw.Shortcut({
@@ -114,6 +116,21 @@
         }));
 
         menu.append(new nw.MenuItem({
+            label: 'Always On Top',
+            type: 'checkbox',
+            checked: onTop,
+            click: function () {
+                if (this.checked) {
+                    onTop = true;
+                    win.setAlwaysOnTop(true);
+                } else {
+                    onTop = false;
+                    win.setAlwaysOnTop(false);
+                }
+            }
+        }));
+
+        menu.append(new nw.MenuItem({
             label: 'Use MS PGothic',
             type: 'checkbox',
             checked: mspgothic,
@@ -177,32 +194,36 @@
         winIsMinimized = true;
     });
 
+    win.on('maximize', function () {
+        winIsMaximized = true;
+    });
+
     win.on('resize', function () {
-        preConfig.width = config.width;
-        preConfig.height = config.height;
-        config.width = win.width;
-        config.height = win.height;
+        if (win.x !== MINIMIZED_X && !chrome.app.window.current().isMaximized()) {
+            config.width = win.width;
+            config.height = win.height;
+        }
     });
 
     win.on('move', function () {
-        preConfig.x = config.x;
-        preConfig.y = config.y;
-        config.x = win.x;
-        config.y = win.y;
+        if (win.x !== MINIMIZED_X && !chrome.app.window.current().isMaximized()) {
+            config.x = win.x;
+            config.y = win.y;
+        }
     });
 
     win.on('restore', function () {
+        winIsMaximized = false;
         winIsMinimized = false;
     });
 
     win.on('close', function () {
         scUnregister();
 
-        if (winIsMinimized) {
-            config = preConfig
-        }
+        config.maximized = winIsMaximized;
         config.toTray = toTray;
         config.mspgothic = mspgothic;
+        config.onTop = onTop;
         config.zoomLevel = win.zoomLevel;
 
         try {
@@ -222,7 +243,12 @@
         if (config.height) win.height = config.height;
         if (config.x) win.x = config.x;
         if (config.y) win.y = config.y;
+        if (config.maximized) win.maximize();
         if (config.toTray != null) toTray = config.toTray;
+        if (config.onTop) {
+            onTop = config.onTop;
+            win.setAlwaysOnTop(onTop);
+        }
         if (config.mspgothic != null) mspgothic = config.mspgothic;
         if (config.zoomLevel == null) {
             throw "zoomException";
@@ -262,6 +288,12 @@
         tdWebview.addEventListener('newwindow', function (e) {
             e.preventDefault();
             nw.Shell.openExternal(e.targetUrl);
+        });
+
+        tdWebview.addEventListener('permissionrequest', function(e) {
+          if (e.permission === 'fullscreen') {
+            e.request.allow();
+          }
         });
     });
 
