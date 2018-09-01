@@ -158,8 +158,8 @@
         tray.on('click', function () {
             if (winIsMinimized) {
                 if (!winIsVisible) {
-                    win.show();
                     winIsVisible = true;
+                    win.setShowInTaskbar(winIsVisible);
                 }
                 win.focus();
             } else {
@@ -176,8 +176,8 @@
 
     win.on('focus', function (){
         if (!winIsVisible) {
-            win.show();
             winIsVisible = true;
+            win.setShowInTaskbar(winIsVisible);
         }
         scRegister();
     });
@@ -188,8 +188,8 @@
 
     win.on('minimize', function () {
         if (toTray) {
-            win.hide();
             winIsVisible = false;
+            win.setShowInTaskbar(winIsVisible);
         }
         winIsMinimized = true;
     });
