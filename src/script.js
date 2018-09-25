@@ -270,6 +270,8 @@
 
     // WebView
     win.window.addEventListener('DOMContentLoaded', function () {
+        win.focus(); // First shortcut registration
+
         tdWebview = document.getElementById('tweetdeck_frame');
 
         tdWebview.addEventListener('loadcommit', function setZoom() {
@@ -303,6 +305,4 @@
     } else {
         toTray = false;
     }
-
-    scRegister();
 })();
