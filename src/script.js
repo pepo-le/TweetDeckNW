@@ -251,7 +251,6 @@
         if (config.toTray != null) toTray = config.toTray;
         if (config.onTop) {
             onTop = config.onTop;
-            win.setAlwaysOnTop(onTop);
         }
         if (config.mspgothic != null) mspgothic = config.mspgothic;
         if (config.zoomLevel == null) {
@@ -269,6 +268,12 @@
     config.height = win.height;
     config.x = win.x;
     config.y = win.y;
+
+    // HACK: Initial ShortCut registration
+    win.setAlwaysOnTop(true);
+    setTimeout(function (){
+        win.setAlwaysOnTop(onTop);
+    }, 100)
 
     win.show();
 
