@@ -20,6 +20,7 @@
     const scZoomReset = new nw.Shortcut({
         key : "Ctrl+0",
         active : function() {
+            win.focus();
             win.zoomLevel = 0;
         },
     });
@@ -27,6 +28,7 @@
     const scZoomOut = new nw.Shortcut({
         key : "Ctrl+1",
         active : function() {
+            win.focus();
             const minZoom = -8;
             if (win.zoomLevel > minZoom) {
                 win.zoomLevel = win.zoomLevel - 1;
@@ -37,6 +39,7 @@
     const scZoomIn = new nw.Shortcut({
         key : "Ctrl+2",
         active : function() {
+            win.focus();
             const maxZoom = 8;
             if (win.zoomLevel < maxZoom) {
                 win.zoomLevel = win.zoomLevel + 1;
@@ -47,6 +50,7 @@
     const scReload = new nw.Shortcut({
         key : "F5",
         active : function() {
+            win.focus();
             tdWebview.reload();
         },
     });
@@ -270,8 +274,6 @@
 
     // WebView
     win.window.addEventListener('DOMContentLoaded', function () {
-        win.focus(); // First shortcut registration
-
         tdWebview = document.getElementById('tweetdeck_frame');
 
         tdWebview.addEventListener('loadcommit', function setZoom() {
