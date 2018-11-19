@@ -16,71 +16,12 @@
     const DEFAULT_HEIGHT = 600;
     const MINIMIZED_X = -32000;
 
-    // Shortcut ---------------------------------
-    const scZoomReset = new nw.Shortcut({
-        key : "Ctrl+0",
-        active : function() {
-            win.focus();
-            win.zoomLevel = 0;
-        },
-    });
-
-    const scZoomOut = new nw.Shortcut({
-        key : "Ctrl+1",
-        active : function() {
-            win.focus();
-            const minZoom = -8;
-            if (win.zoomLevel > minZoom) {
-                win.zoomLevel = win.zoomLevel - 1;
-            }
-        },
-    });
-
-    const scZoomIn = new nw.Shortcut({
-        key : "Ctrl+2",
-        active : function() {
-            win.focus();
-            const maxZoom = 8;
-            if (win.zoomLevel < maxZoom) {
-                win.zoomLevel = win.zoomLevel + 1;
-            }
-        },
-    });
-
-    const scReload = new nw.Shortcut({
-        key : "F5",
-        active : function() {
-            win.focus();
-            tdWebview.reload();
-        },
-    });
-
-    let scIsActive = false;
-    const scRegister = function() {
-        if (!scIsActive) {
-            app.registerGlobalHotKey(scZoomReset);
-            app.registerGlobalHotKey(scZoomOut);
-            app.registerGlobalHotKey(scZoomIn);
-            app.registerGlobalHotKey(scReload);
-            scIsActive = true;
-        }
-    }
-
-    const scUnregister = function() {
-        if (scIsActive) {
-            app.unregisterGlobalHotKey(scZoomReset);
-            app.unregisterGlobalHotKey(scZoomOut);
-            app.unregisterGlobalHotKey(scZoomIn);
-            app.unregisterGlobalHotKey(scReload);
-            scIsActive = false;
-        }
-    }
-
     // Tray -------------------------------------
     const createTray = function () {
         const menu = new nw.Menu();
         const tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
 
+        // Open Window
         menu.append(new nw.MenuItem({
             label: 'Open',
             click: function () {
@@ -91,6 +32,7 @@
             }
         }));
 
+        // Close Window
         menu.append(new nw.MenuItem({
             label: 'Close',
             click: function () {
@@ -98,6 +40,7 @@
             }
         }));
 
+        // Minimize to tray
         menu.append(new nw.MenuItem({
             label: 'Minimize to Tray',
             type: 'checkbox',
@@ -119,8 +62,9 @@
             }
         }));
 
+        // Always on Top
         menu.append(new nw.MenuItem({
-            label: 'Always On Top',
+            label: 'Always on Top',
             type: 'checkbox',
             checked: onTop,
             click: function () {
@@ -134,6 +78,7 @@
             }
         }));
 
+        // Use MS PGotic
         menu.append(new nw.MenuItem({
             label: 'Use MS PGothic',
             type: 'checkbox',
@@ -157,8 +102,10 @@
             }
         }));
 
+        // Append menu to the tray
         tray.menu = menu;
 
+        // Tray event
         tray.on('click', function () {
             if (winIsMinimized) {
                 if (!winIsVisible) {
@@ -183,11 +130,6 @@
             winIsVisible = true;
             win.setShowInTaskbar(winIsVisible);
         }
-        scRegister();
-    });
-
-    win.on('blur', function (){
-        scUnregister();
     });
 
     win.on('minimize', function () {
@@ -222,13 +164,10 @@
     });
 
     win.on('close', function () {
-        scUnregister();
-
         config.maximized = winIsMaximized;
         config.toTray = toTray;
         config.mspgothic = mspgothic;
         config.onTop = onTop;
-        config.zoomLevel = win.zoomLevel;
 
         try {
             fs.writeFileSync(CONFIG_PATH, JSON.stringify(config));
@@ -240,7 +179,7 @@
         app.quit();
     });
 
-    // Window Create ----------------------------
+    // Create Window ----------------------------
     try {
         config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
         if (config.width) win.width = config.width;
@@ -253,11 +192,7 @@
             onTop = config.onTop;
         }
         if (config.mspgothic != null) mspgothic = config.mspgothic;
-        if (config.zoomLevel == null) {
-            throw "zoomException";
-        }
     } catch(e) {
-        config.zoomLevel = 0;
         win.width = DEFAULT_WIDTH;
         win.height = DEFAULT_HEIGHT;
         win.x = window.parent.screen.width / 2 - DEFAULT_WIDTH / 2;
@@ -269,22 +204,13 @@
     config.x = win.x;
     config.y = win.y;
 
-    // HACK: Initial ShortCut registration
-    win.setAlwaysOnTop(true);
-    setTimeout(function (){
-        win.setAlwaysOnTop(onTop);
-    }, 100)
-
     win.show();
 
-    // WebView
+    // WebView Setting --------------------------
     win.window.addEventListener('DOMContentLoaded', function () {
         tdWebview = document.getElementById('tweetdeck_frame');
 
-        tdWebview.addEventListener('loadcommit', function setZoom() {
-            win.zoomLevel = config.zoomLevel;
-            tdWebview.removeEventListener('loadcommit', setZoom);
-        });
+        tdWebview.focus();
 
         tdWebview.addEventListener('loadcommit', function () {
             if (mspgothic) {
@@ -300,13 +226,61 @@
         });
 
         tdWebview.addEventListener('permissionrequest', function(e) {
-          if (e.permission === 'fullscreen') {
-            e.request.allow();
-          }
+            if (e.permission === 'fullscreen') {
+                e.request.allow();
+            }
+        });
+
+        tdWebview.addEventListener('loadcommit', function () {
+            tdWebview.executeScript({
+                code: `
+                    document.body.style.zoom = localStorage.getItem('zoom') + '%';
+                `
+            });
+        });
+
+        // Shortcut
+        tdWebview.addEventListener('loadcommit', function () {
+            tdWebview.executeScript({
+                code: `
+                    window.onkeydown = function (evt) {
+                        if (evt.key == 'F5') {
+                            location.reload();
+                            return;
+                        }
+
+                        if (evt.ctrlKey) {
+                            let zoom = +localStorage.getItem('zoom');
+
+                            if (zoom == 0) {
+                                zoom = 100;
+                            }
+
+                            console.log(zoom);
+
+                            switch (evt.key) {
+                                case '0':
+                                    document.body.style.zoom = '100%';
+                                    localStorage.setItem('zoom', 100);
+                                    break;
+                                case '1':
+                                    document.body.style.zoom = (zoom - 10) + '%';
+                                    localStorage.setItem('zoom', zoom - 10);
+                                    break;
+                                case '2':
+                                    document.body.style.zoom = (zoom + 10) + '%';
+                                    localStorage.setItem('zoom', zoom + 10);
+                                    break;
+                            }
+                        }
+
+                    }
+                `
+            });
         });
     });
 
-    // Init -------------------------------------
+    // Create TrayIcon --------------------------
     if (app.manifest.tray) {
         createTray();
     } else {
