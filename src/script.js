@@ -16,109 +16,6 @@
     const DEFAULT_HEIGHT = 600;
     const MINIMIZED_X = -32000;
 
-    // Tray -------------------------------------
-    const createTray = function () {
-        const menu = new nw.Menu();
-        const tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
-
-        // Open Window
-        menu.append(new nw.MenuItem({
-            label: 'Open',
-            click: function () {
-                if (!winIsVisible) {
-                    win.show();
-                }
-                win.focus();
-            }
-        }));
-
-        // Close Window
-        menu.append(new nw.MenuItem({
-            label: 'Close',
-            click: function () {
-                win.close();
-            }
-        }));
-
-        // Minimize to tray
-        menu.append(new nw.MenuItem({
-            label: 'Minimize to Tray',
-            type: 'checkbox',
-            checked: toTray,
-            click: function () {
-                if (this.checked) {
-                    toTray = true;
-                    if (winIsMinimized) {
-                        win.hide();
-                        winIsVisible = false;
-                    }
-                } else {
-                    toTray = false;
-                    if (!winIsVisible) {
-                        win.show();
-                        winIsVisible = true;
-                    }
-                }
-            }
-        }));
-
-        // Always on Top
-        menu.append(new nw.MenuItem({
-            label: 'Always on Top',
-            type: 'checkbox',
-            checked: onTop,
-            click: function () {
-                if (this.checked) {
-                    onTop = true;
-                    win.setAlwaysOnTop(true);
-                } else {
-                    onTop = false;
-                    win.setAlwaysOnTop(false);
-                }
-            }
-        }));
-
-        // Use MS PGotic
-        menu.append(new nw.MenuItem({
-            label: 'Use MS PGothic',
-            type: 'checkbox',
-            checked: mspgothic,
-            click: function () {
-                if (this.checked) {
-                    mspgothic = true;
-                    if (Object.keys(tdWebview).length !== 0) {
-                        tdWebview.insertCSS({
-                            code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }'
-                        });
-                    }
-                } else {
-                    mspgothic = false;
-                    if (Object.keys(tdWebview).length !== 0) {
-                        tdWebview.insertCSS({
-                          code: '.os-windows .column { font-family: Arial,Verdana,sans-serif; }'
-                        });
-                    }
-                }
-            }
-        }));
-
-        // Append menu to the tray
-        tray.menu = menu;
-
-        // Tray event
-        tray.on('click', function () {
-            if (winIsMinimized) {
-                if (!winIsVisible) {
-                    winIsVisible = true;
-                    win.setShowInTaskbar(winIsVisible);
-                }
-                win.focus();
-            } else {
-                win.minimize();
-            }
-        });
-    };
-
     // Window Event -----------------------------
     win.on('new-win-policy', function(frame, url, policy) {
         policy.ignore();
@@ -166,8 +63,8 @@
     win.on('close', function () {
         config.maximized = winIsMaximized;
         config.toTray = toTray;
-        config.mspgothic = mspgothic;
         config.onTop = onTop;
+        config.mspgothic = mspgothic;
 
         try {
             fs.writeFileSync(CONFIG_PATH, JSON.stringify(config));
@@ -188,9 +85,7 @@
         if (config.y) win.y = config.y;
         if (config.maximized) win.maximize();
         if (config.toTray != null) toTray = config.toTray;
-        if (config.onTop) {
-            onTop = config.onTop;
-        }
+        if (config.onTop != null) onTop = config.onTop;
         if (config.mspgothic != null) mspgothic = config.mspgothic;
     } catch(e) {
         win.width = DEFAULT_WIDTH;
@@ -214,8 +109,11 @@
 
         tdWebview.addEventListener('loadcommit', function () {
             if (mspgothic) {
-                tdWebview.insertCSS(
-                    { code: '.os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }'
+                tdWebview.insertCSS({
+                    code: `
+                        html.os-windows { font-family: Arial,Verdana,"ms pgothic",sans-serif !important; }
+                        .os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }
+                    `
                 });
             }
         });
@@ -282,7 +180,111 @@
 
     // Create TrayIcon --------------------------
     if (app.manifest.tray) {
-        createTray();
+        const menu = new nw.Menu();
+        const tray = new nw.Tray({ title: 'TweetDeckNW', icon: 'trayicon.png' });
+
+        // Open Window
+        menu.append(new nw.MenuItem({
+            label: 'Open',
+            click: function () {
+                if (!winIsVisible) {
+                    win.show();
+                }
+                win.focus();
+            }
+        }));
+
+        // Close Window
+        menu.append(new nw.MenuItem({
+            label: 'Close',
+            click: function () {
+                win.close();
+            }
+        }));
+
+        // Minimize to tray
+        menu.append(new nw.MenuItem({
+            label: 'Minimize to Tray',
+            type: 'checkbox',
+            checked: toTray,
+            click: function () {
+                if (this.checked) {
+                    toTray = true;
+                    if (winIsMinimized) {
+                        win.hide();
+                        winIsVisible = false;
+                    }
+                } else {
+                    toTray = false;
+                    if (!winIsVisible) {
+                        win.show();
+                        winIsVisible = true;
+                    }
+                }
+            }
+        }));
+
+        // Always on Top
+        menu.append(new nw.MenuItem({
+            label: 'Always on Top',
+            type: 'checkbox',
+            checked: onTop,
+            click: function () {
+                if (this.checked) {
+                    onTop = true;
+                    win.setAlwaysOnTop(onTop);
+                } else {
+                    onTop = false;
+                    win.setAlwaysOnTop(onTop);
+                }
+            }
+        }));
+
+        // Use MS PGotic
+        menu.append(new nw.MenuItem({
+            label: 'Use MS PGothic',
+            type: 'checkbox',
+            checked: mspgothic,
+            click: function () {
+                if (this.checked) {
+                    mspgothic = true;
+                    if (Object.keys(tdWebview).length !== 0) {
+                        tdWebview.insertCSS({
+                            code: `
+                                html.os-windows { font-family: Arial,Verdana,"ms pgothic",sans-serif !important; }
+                                .os-windows .column { font-family: Arial,Verdana,"ms pgothic",sans-serif; }
+                            `
+                        });
+                    }
+                } else {
+                    mspgothic = false;
+                    if (Object.keys(tdWebview).length !== 0) {
+                        tdWebview.insertCSS({
+                            code: `
+                                html.os-windows { font-family: Arial,Verdana,sans-serif !important; }
+                                .os-windows .column { font-family: Arial,Verdana,sans-serif; }
+                            `
+                        });
+                    }
+                }
+            }
+        }));
+
+        // Append menu to the tray
+        tray.menu = menu;
+
+        // Tray event
+        tray.on('click', function () {
+            if (winIsMinimized) {
+                if (!winIsVisible) {
+                    winIsVisible = true;
+                    win.setShowInTaskbar(winIsVisible);
+                }
+                win.focus();
+            } else {
+                win.minimize();
+            }
+        });
     } else {
         toTray = false;
     }
