@@ -99,6 +99,7 @@
     config.x = win.x;
     config.y = win.y;
 
+    win.setAlwaysOnTop(onTop);
     win.show();
 
     // WebView Setting --------------------------
