@@ -42,14 +42,12 @@
     });
 
     win.on('resize', function () {
-        if (win.x !== MINIMIZED_X && !chrome.app.window.current().isMaximized()) {
-            config.width = win.width;
-            config.height = win.height;
-        }
+        config.width = win.width;
+        config.height = win.height;
     });
 
     win.on('move', function () {
-        if (win.x !== MINIMIZED_X && !chrome.app.window.current().isMaximized()) {
+        if (win.x !== MINIMIZED_X && !winIsMaximized) {
             config.x = win.x;
             config.y = win.y;
         }
@@ -83,7 +81,6 @@
         if (config.height) win.height = config.height;
         if (config.x) win.x = config.x;
         if (config.y) win.y = config.y;
-        if (config.maximized) win.maximize();
         if (config.toTray != null) toTray = config.toTray;
         if (config.onTop != null) onTop = config.onTop;
         if (config.mspgothic != null) mspgothic = config.mspgothic;
@@ -92,6 +89,7 @@
         win.height = DEFAULT_HEIGHT;
         win.x = window.parent.screen.width / 2 - DEFAULT_WIDTH / 2;
         win.y = window.parent.screen.height / 2 - DEFAULT_HEIGHT / 2;
+        config.maximized = false;
     }
 
     config.width = win.width;
@@ -101,6 +99,7 @@
 
     win.setAlwaysOnTop(onTop);
     win.show();
+    if (config.maximized) win.maximize();
 
     // WebView Setting --------------------------
     win.window.addEventListener('DOMContentLoaded', function () {
@@ -212,14 +211,15 @@
                 if (this.checked) {
                     toTray = true;
                     if (winIsMinimized) {
-                        win.hide();
                         winIsVisible = false;
+                        win.setShowInTaskbar(winIsVisible);
                     }
                 } else {
                     toTray = false;
                     if (!winIsVisible) {
                         win.show();
                         winIsVisible = true;
+                        win.setShowInTaskbar(winIsVisible);
                     }
                 }
             }
